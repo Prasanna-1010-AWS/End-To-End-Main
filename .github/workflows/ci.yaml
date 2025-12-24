@@ -77,7 +77,6 @@ jobs:
           IMAGE_URI=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ steps.set-tag.outputs.short }}
           docker build -t $IMAGE_URI .
           docker push $IMAGE_URI
-          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
   update-helm:
     runs-on: ubuntu-latest
@@ -101,13 +100,11 @@ jobs:
           elif [[ "${GITHUB_REF_NAME}" == "main" ]]; then
             echo "VALUES_FILE=gitops/helm/go-web-app/values-prod.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=go-app.example.com" >> $GITHUB_ENV
+          fi
 
       - name: Update image tag and ingress host in Helm values
         run: |
-          # Update image tag
-          sed -i "s|tag:.*|tag: ${{ steps.set-tag.outputs.short }}|" $VALUES_FILE
-          
-          # Update ingress host
+          sed -i "s|tag:.*|tag: ${{ needs.push-to-ecr.outputs.image-tag }}|" $VALUES_FILE
           sed -i "s|PLACEHOLDER_HOST|${INGRESS_HOST}|" $VALUES_FILE
 
       - name: Commit and push Helm changes
@@ -115,6 +112,5 @@ jobs:
           git config user.email "ci-bot@company.com"
           git config user.name "ci-bot"
           git add $VALUES_FILE
-          git commit -m "ci: update image tag ${{ steps.set-tag.outputs.short }} and ingress host $INGRESS_HOST" || echo "no changes"
+          git commit -m "ci: update image tag ${{ needs.push-to-ecr.outputs.image-tag }} and ingress host $INGRESS_HOST" || echo "no changes"
           git push
-
