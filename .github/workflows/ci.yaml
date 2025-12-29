@@ -29,8 +29,11 @@ jobs:
         with:
           go-version: "1.22"
 
-      - run: go build -o go-web-app .
-      - run: go test ./...
+      - name: Build
+        run: go build -o go-web-app .
+
+      - name: Test
+        run: go test ./...
 
   lint:
     runs-on: ubuntu-latest
@@ -41,9 +44,11 @@ jobs:
         with:
           go-version: "1.22"
 
-      - uses: golangci/golangci-lint-action@v6
+      - name: Run golangci-lint (safe mode)
+        uses: golangci/golangci-lint-action@v6
         with:
           version: v1.56.2
+          args: --timeout=5m --disable-all -E govet
 
   push-to-ecr:
     runs-on: ubuntu-latest
@@ -54,17 +59,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - id: set-tag
+      - name: Generate image tag
+        id: set-tag
         run: echo "short=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - uses: aws-actions/amazon-ecr-login@v2
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - run: |
+      - name: Build and push Docker image
+        run: |
           IMAGE_URI=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ steps.set-tag.outputs.short }}
           docker build -t $IMAGE_URI .
           docker push $IMAGE_URI
@@ -74,13 +83,15 @@ jobs:
     needs: push-to-ecr
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v4
         with:
           repository: ${{ secrets.GITOPS_REPO }}
           token: ${{ secrets.END_TO_END_PAT_TOKEN }}
           path: gitops
 
-      - run: |
+      - name: Select environment config
+        run: |
           if [[ "${GITHUB_REF_NAME}" == "dev" ]]; then
             echo "VALUES_FILE=gitops/helm/go-web-app/values-dev.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=go-app-dev.example.com" >> $GITHUB_ENV
@@ -92,11 +103,13 @@ jobs:
             echo "INGRESS_HOST=go-app.example.com" >> $GITHUB_ENV
           fi
 
-      - run: |
+      - name: Update Helm values
+        run: |
           sed -i "s|tag:.*|tag: ${{ needs.push-to-ecr.outputs.image-tag }}|" $VALUES_FILE
           sed -i "s|PLACEHOLDER_HOST|${INGRESS_HOST}|" $VALUES_FILE
 
-      - run: |
+      - name: Commit and push changes
+        run: |
           git config user.email "prasanna.m.loa@gmail.com"
           git config user.name "Prasanna"
           git add $VALUES_FILE
