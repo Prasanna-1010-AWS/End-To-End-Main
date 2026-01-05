@@ -8,6 +8,7 @@ on:
       - main
     paths-ignore:
       - 'README.md'
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -52,7 +53,7 @@ jobs:
 
   push-to-ecr:
     runs-on: ubuntu-latest
-    needs: [build]
+    needs: [build, lint]
     outputs:
       image-tag: ${{ steps.set-tag.outputs.short }}
 
@@ -93,25 +94,26 @@ jobs:
       - name: Select environment config
         run: |
           if [[ "${GITHUB_REF_NAME}" == "dev" ]]; then
-            echo "VALUES_FILE=gitops/helm/go-web-app/dev-values.yaml" >> $GITHUB_ENV
+            echo "VALUES_FILE=helm/go-web-app/dev-values.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=go-app-dev.example.com" >> $GITHUB_ENV
           elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
-            echo "VALUES_FILE=gitops/helm/go-web-app/staging-values.yaml" >> $GITHUB_ENV
+            echo "VALUES_FILE=helm/go-web-app/staging-values.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=go-app-staging.example.com" >> $GITHUB_ENV
           else
-            echo "VALUES_FILE=gitops/helm/go-web-app/prod-values.yaml" >> $GITHUB_ENV
+            echo "VALUES_FILE=helm/go-web-app/prod-values.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=go-app.example.com" >> $GITHUB_ENV
           fi
 
       - name: Update Helm values
         run: |
-          sed -i "s|tag:.*|tag: ${{ needs.push-to-ecr.outputs.image-tag }}|" $VALUES_FILE
-          sed -i "s|PLACEHOLDER_HOST|${INGRESS_HOST}|" $VALUES_FILE
+          sed -i "s|tag:.*|tag: ${{ needs.push-to-ecr.outputs.image-tag }}|" gitops/$VALUES_FILE
+          sed -i "s|PLACEHOLDER_HOST|${INGRESS_HOST}|" gitops/$VALUES_FILE
 
       - name: Commit and push changes
         run: |
+          cd gitops
           git config user.email "prasanna.m.loa@gmail.com"
           git config user.name "Prasanna"
-          git add $VALUES_FILE
+          git add .
           git commit -m "ci: update image tag ${{ needs.push-to-ecr.outputs.image-tag }} [skip ci]" || echo "no changes"
           git push
