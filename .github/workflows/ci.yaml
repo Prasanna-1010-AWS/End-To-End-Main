@@ -93,13 +93,13 @@ jobs:
       - name: Select environment config
         run: |
           if [[ "${GITHUB_REF_NAME}" == "dev" ]]; then
-            echo "VALUES_FILE=gitops/helm/go-web-app/values-dev.yaml" >> $GITHUB_ENV
+            echo "VALUES_FILE=gitops/helm/go-web-app/dev-values.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=go-app-dev.example.com" >> $GITHUB_ENV
           elif [[ "${GITHUB_REF_NAME}" == "staging" ]]; then
-            echo "VALUES_FILE=gitops/helm/go-web-app/values-staging.yaml" >> $GITHUB_ENV
+            echo "VALUES_FILE=gitops/helm/go-web-app/staging-values.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=go-app-staging.example.com" >> $GITHUB_ENV
           else
-            echo "VALUES_FILE=gitops/helm/go-web-app/values-prod.yaml" >> $GITHUB_ENV
+            echo "VALUES_FILE=gitops/helm/go-web-app/prod-values.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=go-app.example.com" >> $GITHUB_ENV
           fi
 
