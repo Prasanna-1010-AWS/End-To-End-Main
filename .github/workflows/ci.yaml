@@ -5,7 +5,7 @@ on:
     branches:
       - dev
       - staging
-      - main
+      - prod
     paths-ignore:
       - 'README.md'
   workflow_dispatch:
@@ -45,7 +45,7 @@ jobs:
         with:
           go-version: "1.22"
 
-      - name: Run golangci-lint (safe mode)
+      - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
           version: v1.56.2
@@ -91,7 +91,7 @@ jobs:
           token: ${{ secrets.END_TO_END_PAT_TOKEN }}
           path: gitops
 
-      - name: Detect branch and environment
+      - name: Detect environment from branch
         run: |
           BRANCH_NAME="${GITHUB_REF#refs/heads/}"
           echo "Branch detected: $BRANCH_NAME"
@@ -99,14 +99,17 @@ jobs:
           if [[ "$BRANCH_NAME" == "dev" ]]; then
             echo "VALUES_FILE=helm/go-web-app/dev-values.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=dev.prasanna-aws.com" >> $GITHUB_ENV
+
           elif [[ "$BRANCH_NAME" == "staging" ]]; then
             echo "VALUES_FILE=helm/go-web-app/staging-values.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=staging.prasanna-aws.com" >> $GITHUB_ENV
-          elif [[ "$BRANCH_NAME" == "main" ]]; then
+
+          elif [[ "$BRANCH_NAME" == "prod" ]]; then
             echo "VALUES_FILE=helm/go-web-app/prod-values.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=prasanna-aws.com" >> $GITHUB_ENV
+
           else
-            echo "❌ Unknown branch: $BRANCH_NAME"
+            echo "Unknown branch: $BRANCH_NAME"
             exit 1
           fi
 
