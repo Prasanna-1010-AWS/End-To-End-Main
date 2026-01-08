@@ -3,7 +3,7 @@ name: CI/CD
 on:
   push:
     branches:
-      - prod
+      - dev
       - staging
       - prod
     paths-ignore:
@@ -91,7 +91,7 @@ jobs:
           token: ${{ secrets.END_TO_END_PAT_TOKEN }}
           path: gitops
 
-      - name: Detect branch and environment
+      - name: Detect environment from branch
         run: |
           BRANCH_NAME="${GITHUB_REF#refs/heads/}"
           echo "Branch detected: $BRANCH_NAME"
@@ -99,35 +99,30 @@ jobs:
           if [[ "$BRANCH_NAME" == "dev" ]]; then
             echo "VALUES_FILE=helm/go-web-app/dev-values.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=dev.prasanna-aws.com" >> $GITHUB_ENV
+
           elif [[ "$BRANCH_NAME" == "staging" ]]; then
             echo "VALUES_FILE=helm/go-web-app/staging-values.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=staging.prasanna-aws.com" >> $GITHUB_ENV
-          elif [[ "$BRANCH_NAME" == "main" ]]; then
+
+          elif [[ "$BRANCH_NAME" == "prod" ]]; then
             echo "VALUES_FILE=helm/go-web-app/prod-values.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=prasanna-aws.com" >> $GITHUB_ENV
+
           else
-            echo "❌ Unknown branch: $BRANCH_NAME"
+            echo "Unknown branch: $BRANCH_NAME"
             exit 1
           fi
 
-      - name: Debug before update
-        run: cat gitops/$VALUES_FILE
-
       - name: Update Helm values
         run: |
-          # Update image tag safely
-          sed -i "s|^\s*tag:.*|  tag: ${{ needs.push-to-ecr.outputs.image-tag }}|" gitops/$VALUES_FILE
-          # Update ALB ingress host
+          sed -i "s|tag:.*|tag: ${{ needs.push-to-ecr.outputs.image-tag }}|" gitops/$VALUES_FILE
           sed -i "s|PLACEHOLDER_HOST|${INGRESS_HOST}|" gitops/$VALUES_FILE
-
-      - name: Debug after update
-        run: cat gitops/$VALUES_FILE
 
       - name: Commit and push changes
         run: |
           cd gitops
           git config user.email "prasanna.m.loa@gmail.com"
           git config user.name "Prasanna"
-          git add $VALUES_FILE
+          git add .
           git commit -m "ci: update image tag ${{ needs.push-to-ecr.outputs.image-tag }} [skip ci]" || echo "no changes"
           git push
