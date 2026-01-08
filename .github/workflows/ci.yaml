@@ -104,7 +104,7 @@ jobs:
             echo "VALUES_FILE=helm/go-web-app/staging-values.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=staging.prasanna-aws.com" >> $GITHUB_ENV
 
-          elif [[ "$BRANCH_NAME" == "production" ]]; then
+          elif [[ "$BRANCH_NAME" == "prod" ]]; then
             echo "VALUES_FILE=helm/go-web-app/prod-values.yaml" >> $GITHUB_ENV
             echo "INGRESS_HOST=prasanna-aws.com" >> $GITHUB_ENV
 
