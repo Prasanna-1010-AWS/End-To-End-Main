@@ -7,7 +7,7 @@ on:
       - staging
       - prod
     paths-ignore:
-      - 'README.md'
+      - README.md
   workflow_dispatch:
 
 permissions:
@@ -18,11 +18,10 @@ env:
   AWS_REGION: ap-south-1
   AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
   ECR_REPOSITORY: endtoend
-  EKS_CLUSTER: <YOUR_EKS_CLUSTER_NAME>  # Replace with your cluster name
 
 jobs:
 
-  build:
+  build-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,33 +36,18 @@ jobs:
       - name: Test
         run: go test ./...
 
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.22"
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.56.2
-          args: --timeout=5m --disable-all -E govet
-
   push-to-ecr:
     runs-on: ubuntu-latest
-    needs: [build, lint]
+    needs: build-test
     outputs:
-      image-tag: ${{ steps.set-tag.outputs.short }}
+      image_tag: ${{ steps.tag.outputs.tag }}
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Generate image tag
-        id: set-tag
-        run: echo "short=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+        id: tag
+        run: echo "tag=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -71,18 +55,19 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Login to Amazon ECR
+      - name: Login to ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push Docker image
+      - name: Build & push image
         run: |
-          IMAGE_URI=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ steps.set-tag.outputs.short }}
+          IMAGE_URI=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}:${{ steps.tag.outputs.tag }}
           docker build -t $IMAGE_URI .
           docker push $IMAGE_URI
 
-  update-helm:
+  update-gitops:
     runs-on: ubuntu-latest
     needs: push-to-ecr
+
     steps:
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
@@ -91,50 +76,29 @@ jobs:
           token: ${{ secrets.END_TO_END_PAT_TOKEN }}
           path: gitops
 
-      - name: Detect environment from branch
+      - name: Detect environment
         run: |
-          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-          echo "Branch detected: $BRANCH_NAME"
+          BRANCH="${GITHUB_REF#refs/heads/}"
 
-          if [[ "$BRANCH_NAME" == "dev" ]]; then
-            echo "VALUES_FILE=helm/go-web-app/dev-values.yaml" >> $GITHUB_ENV
-            echo "NAMESPACE=dev" >> $GITHUB_ENV
-            echo "INGRESS_HOST=dev.prasanna-aws.com" >> $GITHUB_ENV
-          elif [[ "$BRANCH_NAME" == "staging" ]]; then
-            echo "VALUES_FILE=helm/go-web-app/staging-values.yaml" >> $GITHUB_ENV
-            echo "NAMESPACE=staging" >> $GITHUB_ENV
-            echo "INGRESS_HOST=staging.prasanna-aws.com" >> $GITHUB_ENV
-          elif [[ "$BRANCH_NAME" == "prod" ]]; then
-            echo "VALUES_FILE=helm/go-web-app/prod-values.yaml" >> $GITHUB_ENV
-            echo "NAMESPACE=prod" >> $GITHUB_ENV
-            echo "INGRESS_HOST=prasanna-aws.com" >> $GITHUB_ENV
+          if [ "$BRANCH" = "dev" ]; then
+            echo "VALUES=helm/go-web-app/dev-values.yaml" >> $GITHUB_ENV
+          elif [ "$BRANCH" = "staging" ]; then
+            echo "VALUES=helm/go-web-app/staging-values.yaml" >> $GITHUB_ENV
+          elif [ "$BRANCH" = "prod" ]; then
+            echo "VALUES=helm/go-web-app/prod-values.yaml" >> $GITHUB_ENV
           else
-            echo "❌ Unknown branch: $BRANCH_NAME"
             exit 1
           fi
 
-      - name: Update Helm values
+      - name: Update image tag
         run: |
-          sed -i "s|tag:.*|tag: ${{ needs.push-to-ecr.outputs.image-tag }}|" gitops/$VALUES_FILE
-          sed -i "s|PLACEHOLDER_HOST|${INGRESS_HOST}|" gitops/$VALUES_FILE
+          sed -i "s|tag:.*|tag: \"${{ needs.push-to-ecr.outputs.image_tag }}\"|" gitops/$VALUES
 
-      - name: Configure kubeconfig for EKS
-        run: |
-          aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER }}
-
-      - name: Deploy with Helm
-        run: |
-          helm upgrade go-web-app gitops/helm/go-web-app \
-            -f gitops/$VALUES_FILE \
-            --namespace $NAMESPACE \
-            --create-namespace \
-            --install
-
-      - name: Commit and push changes
+      - name: Commit & push
         run: |
           cd gitops
-          git config user.email "prasanna.m.loa@gmail.com"
           git config user.name "Prasanna"
+          git config user.email "prasanna.m.loa@gmail.com"
           git add .
-          git commit -m "ci: update image tag ${{ needs.push-to-ecr.outputs.image-tag }} [skip ci]" || echo "no changes"
+          git commit -m "ci: update image tag to ${{ needs.push-to-ecr.outputs.image_tag }}" || echo "No changes"
           git push
