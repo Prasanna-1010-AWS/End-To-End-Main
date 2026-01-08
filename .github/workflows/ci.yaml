@@ -40,11 +40,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
-
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
@@ -98,18 +96,21 @@ jobs:
 
           if [[ "$BRANCH_NAME" == "dev" ]]; then
             echo "VALUES_FILE=helm/go-web-app/dev-values.yaml" >> $GITHUB_ENV
+            echo "NAMESPACE=dev" >> $GITHUB_ENV
             echo "INGRESS_HOST=dev.prasanna-aws.com" >> $GITHUB_ENV
 
           elif [[ "$BRANCH_NAME" == "staging" ]]; then
             echo "VALUES_FILE=helm/go-web-app/staging-values.yaml" >> $GITHUB_ENV
+            echo "NAMESPACE=staging" >> $GITHUB_ENV
             echo "INGRESS_HOST=staging.prasanna-aws.com" >> $GITHUB_ENV
 
           elif [[ "$BRANCH_NAME" == "prod" ]]; then
             echo "VALUES_FILE=helm/go-web-app/prod-values.yaml" >> $GITHUB_ENV
+            echo "NAMESPACE=production" >> $GITHUB_ENV  # map prod branch → production namespace
             echo "INGRESS_HOST=prasanna-aws.com" >> $GITHUB_ENV
 
           else
-            echo "Unknown branch: $BRANCH_NAME"
+            echo "❌ Unknown branch: $BRANCH_NAME"
             exit 1
           fi
 
@@ -117,6 +118,14 @@ jobs:
         run: |
           sed -i "s|tag:.*|tag: ${{ needs.push-to-ecr.outputs.image-tag }}|" gitops/$VALUES_FILE
           sed -i "s|PLACEHOLDER_HOST|${INGRESS_HOST}|" gitops/$VALUES_FILE
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade go-web-app gitops/helm/go-web-app \
+            -f gitops/$VALUES_FILE \
+            --namespace $NAMESPACE \
+            --create-namespace \
+            --install
 
       - name: Commit and push changes
         run: |
