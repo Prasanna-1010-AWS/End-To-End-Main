@@ -4,6 +4,12 @@
 
 ---
 
+### End-to-End Architecture
+
+![end to end image](https://github.com/user-attachments/assets/b29b406c-20c3-4b00-b3a7-8caa8b8b8ed3)
+
+---
+
 # 📌 Project Overview
 
 This project demonstrates a **complete End-to-End DevOps and GitOps deployment architecture** implemented using AWS Cloud, Kubernetes, Terraform, GitHub Actions, Helm, and ArgoCD.
@@ -452,24 +458,20 @@ Specializing in:
 
 ## 📸 Project Implementation Proof
 
-### 1️⃣ End-to-End Architecture
-
-![end to end image](https://github.com/user-attachments/assets/b29b406c-20c3-4b00-b3a7-8caa8b8b8ed3)
-
----
-
-### 2️⃣ GitHub Actions — CI Pipeline
+### GitHub Actions — CI Pipeline
 
 ![github actions](https://github.com/user-attachments/assets/9760ab5f-3026-45c1-949a-d490ee42c681)
 
 ---
 
-### 3️⃣ ArgoCD — GitOps Deployment
+### ArgoCD — GitOps Deployment
 
 <img width="1920" height="1200" alt="ArgoCD UI" src="https://github.com/user-attachments/assets/e77f7b82-9af2-46a1-9597-19ea42357cf7" />
 
 ---
 
-### 4️⃣ Application — Live UI
+### Application — Live UI
 
-<img width="1920" height="1094" alt="Final application output" src="https://github.com/user-attachments/assets/bbd823fb-1e02-445b-bb39-bfaa71a256db" />
+<img width="1920" height="1200" alt="Screenshot (63)" src="https://github.com/user-attachments/assets/dc963ce0-e0a8-404d-ae93-ba9a243aa528" />
+
+
