@@ -168,6 +168,12 @@ Through this project, I gained hands-on experience in:
 
 ---
 
+* **ECR Repository**
+
+<img width="1920" height="1200" alt="Screenshot (79)" src="https://github.com/user-attachments/assets/6cb59240-cbe8-4911-8581-aae6bcf7ce64" />
+
+---
+
 * **Argo CD Sync Dashboard**
   
  <img width="1920" height="1143" alt="Screenshot (64)" src="https://github.com/user-attachments/assets/d56eee2f-faef-4115-bd7c-60acb02674ce" />
@@ -178,8 +184,8 @@ Through this project, I gained hands-on experience in:
 ---
 
 * **Route53 - Hosted zone - Sub-Domains**
-  
-  <img width="1920" height="1200" alt="dns" src="https://github.com/user-attachments/assets/66f6d5f6-78d3-4a72-abe9-4f3906244106" />
+
+ <img width="1920" height="1200" alt="Screenshot (78)" src="https://github.com/user-attachments/assets/829ecfc8-ada2-40fd-beff-956f139858d2" />
 
 ---
 
@@ -191,8 +197,8 @@ Through this project, I gained hands-on experience in:
 ---
 
 ## Source Code Repositories
-* Application & CI Pipeline → https://github.com/Narendhiran-B/End-to-End-Main.git
-* GitOps Deployment Repo → https://github.com/Narendhiran-B/End-to-End-GitOps.git
+* Application & CI Pipeline → https://github.com/Prasanna-1010-AWS/End-To-End-Main.git
+* GitOps Deployment Repo → https://github.com/Prasanna-1010-AWS/End-To-End-GitOps.git
 ---
 ## Author Note
 This project was built as a production-style DevOps implementation to demonstrate practical skills in cloud infrastructure, Kubernetes, CI/CD automation, and GitOps deployment strategies as a fresher entering the DevOps domain.
